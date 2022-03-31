@@ -61,3 +61,11 @@ sudo systemctl restart systemd-journald
 sudo systemctl daemon-reload
 sudo systemctl enable aptosd
 sudo systemctl restart aptosd
+
+[adding reload step]
+systemctl stop aptosd
+rm -rf /opt/aptos/data/*
+wget -O /opt/aptos/data/genesis.blob https://devnet.aptoslabs.com/genesis.blob
+wget -O ~/.aptos/waypoint.txt https://devnet.aptoslabs.com/waypoint.txt
+sed -i.bak -e "s/from_config: \".*\"/from_config: \"$(cat ~/.aptos/waypoint.txt)\"/" $HOME/.aptos/config/public_full_node.yaml
+systemctl restart aptosd
