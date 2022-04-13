@@ -11,11 +11,11 @@ fi
 curl -s https://raw.githubusercontent.com/exfeddix17/cryptohodl/main/cryptohodl.sh | bash && sleep 2
 sudo apt update && sudo apt install git -y
 cd $HOME
-rm -rf aptos-core aptos
+rm -rf aptos-core
 sudo mkdir -p /opt/aptos/data .aptos/config .aptos/key
 git clone https://github.com/aptos-labs/aptos-core.git
 cd aptos-core
-git checkout devnet &>/dev/null
+git checkout origin/devnet &>/dev/null
 echo y | ./scripts/dev_setup.sh
 source ~/.cargo/env
 cargo build -p aptos-node --release
@@ -27,18 +27,22 @@ mv ~/aptos-core/target/release/aptos-operational-tool /usr/local/bin
 cp ~/aptos-core/config/src/config/test_data/public_full_node.yaml ~/.aptos/config
 wget -O /opt/aptos/data/genesis.blob https://devnet.aptoslabs.com/genesis.blob
 wget -q -O ~/.aptos/waypoint.txt https://devnet.aptoslabs.com/waypoint.txt
+wget -q -O /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.23.1/yq_linux_amd64 && chmod +x /usr/local/bin/yq
+wget -O seeds.yaml https://raw.githubusercontent.com/Pa1amar/aptos/main/seeds.yaml
 WAYPOINT=$(cat ~/.aptos/waypoint.txt)
 PRIVKEY=$(cat ~/.aptos/key/private-key.txt)
 PEER=$(sed -n 2p ~/.aptos/config/peer-info.yaml | sed 's/.$//')
 sed -i.bak -e "s/0:01234567890ABCDEFFEDCA098765421001234567890ABCDEFFEDCA0987654210/$WAYPOINT/" $HOME/.aptos/config/public_full_node.yaml
 sed -i "s/genesis_file_location: .*/genesis_file_location: \"\/opt\/aptos\/data\/genesis.blob\"/" $HOME/.aptos/config/public_full_node.yaml
-sleep 2
+sleep 2 
 sed -i "s/127.0.0.1/0.0.0.0/" $HOME/.aptos/config/public_full_node.yaml
 sed -i '/network_id: "public"$/a\
       identity:\
         type: "from_config"\
         key: "'$PRIVKEY'"\
         peer_id: "'$PEER'"' $HOME/.aptos/config/public_full_node.yaml
+
+/usr/local/bin/yq ea -i 'select(fileIndex==0).full_node_networks[0].seeds = select(fileIndex==1).seeds | select(fileIndex==0)' $HOME/.aptos/config/public_full_node.yaml seeds.yaml
 
 echo "[Unit]
 Description=Aptos
@@ -52,9 +56,14 @@ Restart=on-failure
 LimitNOFILE=65535
 
 [Install]
-WantedBy=multi-user.target" > $HOME/aptos-node.service
-mv $HOME/aptos-node.service /etc/systemd/system/
+WantedBy=multi-user.target" > $HOME/aptosd.service
+mv $HOME/aptosd.service /etc/systemd/system/
 sudo systemctl restart systemd-journald
 sudo systemctl daemon-reload
-sudo systemctl enable aptos-node
-sudo systemctl restart aptos-node
+sudo systemctl enable aptosd
+sudo systemctl restart aptosd
+
+
+
+
+
